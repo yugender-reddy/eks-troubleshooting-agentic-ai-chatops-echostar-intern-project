@@ -17,7 +17,7 @@ serviceAccount:
 config:
   clusterName: ""
   awsRegion: "us-west-2"
-  bedrockModelId: "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+  bedrockModelId: "amazon.nova-micro-v1:0"
   logLevel: "INFO"
   
   # Vector Storage Configuration
@@ -31,19 +31,32 @@ config:
   eksMcp:
     enabled: true
     allowWrite: false
-    
-  # Slack configuration (use secrets)
-  slack:
-    botToken: ""
-    appToken: ""
-    signingSecret: ""
 
-# Secrets (will be created from values)
+  # Google Chat configuration
+  gchat:
+    projectId: ""
+    projectNumber: ""
+    serviceAccountKeyPath: "/secrets/gchat/service-account-key.json"
+
+  # Chat platform: 'slack' uses Socket Mode (no NLB), 'gchat' uses HTTP webhook (NLB required)
+  chatPlatform: "slack"
+
+  # Mock mode: set to "false" once real credentials are available
+  mockMode: "true"
+
+# Secrets (Google Chat service account key)
 secrets:
-  slack:
-    botToken: ""
-    appToken: ""
-    signingSecret: ""
+  gchat:
+    # Base64-encoded service account JSON key content
+    serviceAccountKey: ""
+
+# Service configuration
+# For Slack (Socket Mode): ClusterIP is sufficient — no inbound traffic needed
+# For Google Chat: LoadBalancer provisions an NLB for Google to POST webhook events to
+service:
+  type: ClusterIP
+  port: 80
+  annotations: {}
 
 podAnnotations: {}
 

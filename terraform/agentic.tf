@@ -160,19 +160,17 @@ resource "aws_eks_access_policy_association" "agentic_agent_admin" {
 }
 
 ################################################################################
-# Kubernetes Secret for Slack Credentials
+# Kubernetes Secret for Google Chat Credentials
 ################################################################################
 
-resource "kubernetes_secret" "slack_credentials" {
+resource "kubernetes_secret" "gchat_credentials" {
   metadata {
-    name      = "slack-credentials"
+    name      = "gchat-credentials"
     namespace = "default"
   }
 
   data = {
-    bot-token      = var.slack_bot_token
-    app-token      = var.slack_app_token
-    signing-secret = var.slack_signing_secret
+    "service-account-key.json" = var.gchat_service_account_key
   }
 
   type = "Opaque"
@@ -210,6 +208,7 @@ resource "helm_release" "agentic_agent" {
         awsRegion      = local.region
         bedrockModelId = var.bedrock_model_id
         logLevel       = "INFO"
+        chatPlatform   = var.chat_platform
 
         # Vector Storage Configuration
         vectorBucket = var.vector_bucket_name
@@ -223,19 +222,37 @@ resource "helm_release" "agentic_agent" {
           allowWrite = true
         }
 
-        slack = {
-          botToken      = var.slack_bot_token
-          appToken      = var.slack_app_token
-          signingSecret = var.slack_signing_secret
+        gchat = {
+          projectId            = var.gchat_project_id
+          serviceAccountKeyPath = "/secrets/gchat/service-account-key.json"
         }
       }
 
       secrets = {
         slack = {
           botToken      = var.slack_bot_token
-          appToken      = var.slack_app_token
           signingSecret = var.slack_signing_secret
         }
+        gchat = {
+          serviceAccountKey = var.gchat_service_account_key
+        }
+      }
+
+      # When using Google Chat, expose the webhook via an internal NLB.
+      # Google Chat requires a public HTTPS URL to POST events to.
+      # When using Slack Socket Mode, ClusterIP is sufficient (outbound only).
+      service = var.chat_platform == "gchat" ? {
+        type = "LoadBalancer"
+        port = 80
+        annotations = {
+          "service.beta.kubernetes.io/aws-load-balancer-type"            = "external"
+          "service.beta.kubernetes.io/aws-load-balancer-nlb-target-type" = "ip"
+          "service.beta.kubernetes.io/aws-load-balancer-scheme"          = "internet-facing"
+        }
+      } : {
+        type = "ClusterIP"
+        port = 80
+        annotations = {}
       }
 
       resources = {
@@ -274,6 +291,6 @@ resource "helm_release" "agentic_agent" {
 
   depends_on = [
     aws_eks_pod_identity_association.agentic_agent,
-    kubernetes_secret.slack_credentials
+    kubernetes_secret.gchat_credentials
   ]
 }

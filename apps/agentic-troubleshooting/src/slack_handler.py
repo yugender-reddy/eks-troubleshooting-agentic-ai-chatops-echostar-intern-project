@@ -1,4 +1,10 @@
-"""Simple Slack handler for the K8s troubleshooting agent."""
+"""Slack Socket Mode handler for the K8s troubleshooting agent.
+
+This is the active chat integration. Connects via Slack Socket Mode
+(no public webhook URL needed) and routes messages to the orchestrator.
+
+Entrypoint: python main_slack.py
+"""
 
 import logging
 import asyncio
@@ -9,6 +15,7 @@ from src.prompts import K8S_KEYWORDS
 
 
 from src.config.settings import Config
+from src.config.rate_limiter import bedrock_limiter, RATE_LIMIT_MSG
 from src.agents.agent_orchestrator import OrchestratorAgent, AgentSilentException
 
 logger = logging.getLogger(__name__)
@@ -175,10 +182,15 @@ class SlackHandler:
                 thread_key = f"{channel}:{thread_ts}"
                 logger.info("Generating response for mention...")
                 response = self.respond(text, thread_key)
+                
+                # Didnt pass the callback validation mechanism
+                if not response:
+                    return None
+                
                 logger.info(f"Mention response generated: {len(response)} characters")
                 
                 # Ensure response is not empty
-                if not response or not response.strip():
+                if not response.strip():
                     logger.warning("Empty response detected, using fallback")
                     response = "I'm here to help with Kubernetes troubleshooting. How can I assist you?"
                 
@@ -226,6 +238,8 @@ class SlackHandler:
 
     def respond(self, message: str, thread_id: str, context: str = None) -> str:
         """Main entry point for responses."""
+        if not bedrock_limiter.allow():
+            return RATE_LIMIT_MSG
         try:
             self.orchestrator.last_user_message = message
             agent_response = self.orchestrator.agent(message)

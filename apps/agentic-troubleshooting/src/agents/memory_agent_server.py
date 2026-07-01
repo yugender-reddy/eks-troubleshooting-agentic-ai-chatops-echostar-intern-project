@@ -7,6 +7,7 @@ import json
 import logging
 import os
 from typing import Dict, Any
+from src.config.rate_limiter import embedding_limiter, s3vectors_limiter, RATE_LIMIT_MSG
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ class MemoryAgentServer:
 2. RETRIEVE solutions: When given problems, search for similar past solutions and return ALL details found
 3. Only do what you are asked to do, nothing more, if it is retrieve just retrieve, if it is save, just save
 4. For storage: Extract problem description, solution steps, and relevant K8s resources
-5. Format responses for Slack bold is single *  (DO NOT USE MARKDOWN)
+5. Format responses for Google Chat (bold with *, code with backticks)
 6. Always return the solution, along with a message that you have stored"""
         
         # Create Strands agent with memory tools
@@ -51,6 +52,10 @@ class MemoryAgentServer:
         """Store a K8s troubleshooting solution in S3 Vectors."""
         if not self.s3vectors_client:
             return "S3 Vectors client not available"
+        if not embedding_limiter.allow():
+            return RATE_LIMIT_MSG
+        if not s3vectors_limiter.allow():
+            return RATE_LIMIT_MSG
         
         try:
             # Create document content
@@ -91,6 +96,10 @@ class MemoryAgentServer:
         """Retrieve similar K8s troubleshooting solutions from S3 Vectors."""
         if not self.s3vectors_client:
             return "S3 Vectors client not available"
+        if not embedding_limiter.allow():
+            return RATE_LIMIT_MSG
+        if not s3vectors_limiter.allow():
+            return RATE_LIMIT_MSG
         
         try:
             # Generate query embedding

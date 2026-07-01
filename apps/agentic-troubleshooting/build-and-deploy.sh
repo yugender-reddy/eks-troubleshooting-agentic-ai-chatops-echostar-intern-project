@@ -4,18 +4,19 @@
 
 set -e
 
-# Configuration - UPDATE THESE VALUES
-ECR_REGISTRY="YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com"
-IMAGE_NAME="k8s-troubleshooting-agent"
-AWS_REGION="${AWS_REGION}"
-IMAGE_TAG="latest"
-CLUSTER_NAME="genai-workshop"
-NAMESPACE="k8s-troubleshooting"
+# Load all variables from .env
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/export_env.sh"
+load_env "${SCRIPT_DIR}/.env"
 
-# Slack credentials (set these as environment variables)
-SLACK_BOT_TOKEN="${SLACK_BOT_TOKEN}"
-SLACK_APP_TOKEN="${SLACK_APP_TOKEN}"
-SLACK_SIGNING_SECRET="${SLACK_SIGNING_SECRET}"
+# Validate required variables are set
+required_vars=(ECR_REGISTRY IMAGE_NAME IMAGE_TAG CLUSTER_NAME NAMESPACE AWS_REGION SLACK_BOT_TOKEN SLACK_APP_TOKEN SLACK_SIGNING_SECRET)
+for var in "${required_vars[@]}"; do
+    if [ -z "${!var}" ]; then
+        echo "Error: $var is not set in .env"
+        exit 1
+    fi
+done
 
 echo "🚀 Building and deploying K8s Troubleshooting Agent..."
 

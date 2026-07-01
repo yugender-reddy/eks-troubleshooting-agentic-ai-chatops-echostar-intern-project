@@ -67,89 +67,93 @@ spec:
               value: {{ .Values.config.vectorBucket | quote }}
             - name: INDEX_NAME
               value: {{ .Values.config.indexName | quote }}
-            # Memory Agent A2A URL
-            - name: MEMORY_AGENT_SERVER_URL
-              value: "http://localhost:9000"
-            - name: SLACK_BOT_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "k8s-troubleshooting-agent.fullname" . }}-slack
-                  key: slack-bot-token
-            - name: SLACK_APP_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "k8s-troubleshooting-agent.fullname" . }}-slack
-                  key: slack-app-token
-            - name: SLACK_SIGNING_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "k8s-troubleshooting-agent.fullname" . }}-slack
-                  key: slack-signing-secret
+            # Memory Agent A2A URL (disabled - uncomment when memory agent is connected)
+            # - name: MEMORY_AGENT_SERVER_URL
+            #   value: "http://localhost:9000"
+            # Google Chat Configuration
+            - name: MOCK_MODE
+              value: {{ .Values.config.mockMode | quote }}
+            - name: CHAT_PLATFORM
+              value: {{ .Values.config.chatPlatform | default "slack" | quote }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: {{ .Values.config.gchat.serviceAccountKeyPath | quote }}
+            - name: GCHAT_PROJECT_ID
+              value: {{ .Values.config.gchat.projectId | quote }}
+            - name: GCHAT_PROJECT_NUMBER
+              value: {{ .Values.config.gchat.projectNumber | quote }}
           volumeMounts:
             - name: kubeconfig-volume
               mountPath: /shared
               readOnly: true
+            - name: gchat-secret
+              mountPath: /secrets/gchat
+              readOnly: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
           livenessProbe:
-            exec:
-              command:
-                - python
-                - -c
-                - "import sys; sys.exit(0)"
+            httpGet:
+              path: /health
+              port: 8080
             initialDelaySeconds: 30
             periodSeconds: 30
           readinessProbe:
-            exec:
-              command:
-                - python
-                - -c
-                - "import sys; sys.exit(0)"
+            httpGet:
+              path: /health
+              port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
-        - name: memory-agent
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["python", "memory_agent_main.py"]
-          env:
-            - name: AWS_REGION
-              value: {{ .Values.config.awsRegion | quote }}
-            - name: BEDROCK_MODEL_ID
-              value: {{ .Values.config.bedrockModelId | quote }}
-            - name: LOG_LEVEL
-              value: {{ .Values.config.logLevel | quote }}
-            # Vector Storage Configuration
-            - name: VECTOR_BUCKET
-              value: {{ .Values.config.vectorBucket | quote }}
-            - name: INDEX_NAME
-              value: {{ .Values.config.indexName | quote }}
-          ports:
-            - name: a2a
-              containerPort: 9000
-              protocol: TCP
-          resources:
-            limits:
-              cpu: 250m
-              memory: 256Mi
-            requests:
-              cpu: 50m
-              memory: 128Mi
-          livenessProbe:
-            tcpSocket:
-              port: 9000
-            initialDelaySeconds: 30
-            periodSeconds: 30
-            failureThreshold: 3
-          readinessProbe:
-            tcpSocket:
-              port: 9000
-            initialDelaySeconds: 10
-            periodSeconds: 10
+        # NOTE: Memory agent sidecar is disabled until memory_agent_server is connected.
+        # Uncomment the block below when ready to enable the memory agent.
+        # - name: memory-agent
+        #   securityContext:
+        #     {{- toYaml .Values.securityContext | nindent 12 }}
+        #   image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        #   imagePullPolicy: {{ .Values.image.pullPolicy }}
+        #   command: ["python", "memory_agent_main.py"]
+        #   env:
+        #     - name: AWS_REGION
+        #       value: {{ .Values.config.awsRegion | quote }}
+        #     - name: BEDROCK_MODEL_ID
+        #       value: {{ .Values.config.bedrockModelId | quote }}
+        #     - name: LOG_LEVEL
+        #       value: {{ .Values.config.logLevel | quote }}
+        #     # Vector Storage Configuration
+        #     - name: VECTOR_BUCKET
+        #       value: {{ .Values.config.vectorBucket | quote }}
+        #     - name: INDEX_NAME
+        #       value: {{ .Values.config.indexName | quote }}
+        #   ports:
+        #     - name: a2a
+        #       containerPort: 9000
+        #       protocol: TCP
+        #   resources:
+        #     limits:
+        #       cpu: 250m
+        #       memory: 256Mi
+        #     requests:
+        #       cpu: 50m
+        #       memory: 128Mi
+        #   livenessProbe:
+        #     tcpSocket:
+        #       port: 9000
+        #     initialDelaySeconds: 30
+        #     periodSeconds: 30
+        #     failureThreshold: 3
+        #   readinessProbe:
+        #     tcpSocket:
+        #       port: 9000
+        #     initialDelaySeconds: 10
+        #     periodSeconds: 10
       volumes:
         - name: kubeconfig-volume
           emptyDir: {}
+        - name: gchat-secret
+          secret:
+            secretName: {{ include "k8s-troubleshooting-agent.fullname" . }}-gchat
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

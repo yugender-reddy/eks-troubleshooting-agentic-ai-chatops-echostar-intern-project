@@ -2,6 +2,7 @@ from strands import Agent, tool
 from src.agents.k8s_specialist import K8sSpecialist
 from src.config.settings import Config
 from src.config.telemetry import setup_langfuse_telemetry
+from src.config.rate_limiter import bedrock_limiter, RATE_LIMIT_MSG
 from src.prompts import ORCHESTRATOR_SYSTEM_PROMPT, CLASSIFICATION_PROMPT, K8S_KEYWORDS
 from strands_tools.a2a_client import A2AClientToolProvider
 from strands.hooks.events import BeforeInvocationEvent
@@ -34,8 +35,8 @@ class OrchestratorAgent:
         self.agent = Agent(
             name="K8s Orchestrator",
             system_prompt=ORCHESTRATOR_SYSTEM_PROMPT,
-            model=Config.BEDROCK_MODEL_ID,
-            tools=[self.troubleshoot_k8s, self.memory_agent_provider]
+            model=Config.ORCHESTRATOR_MODEL_ID,
+            tools=[self.troubleshoot_k8s]  # memory_agent_provider excluded until memory agent is running
         )
         
         self.agent.hooks.add_callback(BeforeInvocationEvent, self.callback_message_validator)
@@ -52,6 +53,9 @@ class OrchestratorAgent:
 
     def _classify_with_nova(self, message: str) -> bool:
         """Use Amazon Nova Micro to classify if message is K8s/troubleshooting related."""
+        if not bedrock_limiter.allow():
+            logger.warning("Classification rate-limited, falling back to keyword match")
+            return any(keyword in message.lower() for keyword in K8S_KEYWORDS)
         try:
             prompt = CLASSIFICATION_PROMPT.format(message=message)
             
@@ -69,7 +73,7 @@ class OrchestratorAgent:
             }
             
             response = self.bedrock_client.invoke_model(
-                modelId="amazon.nova-micro-v1:0",
+                modelId=Config.ORCHESTRATOR_MODEL_ID,
                 body=json.dumps(body)
             )
             
@@ -88,6 +92,8 @@ class OrchestratorAgent:
     @tool
     def troubleshoot_k8s(self, query: str) -> str:
         """Perform K8s troubleshooting."""
+        if not bedrock_limiter.allow():
+            return RATE_LIMIT_MSG
         try:
             return self.k8s_specialist.troubleshoot(query)
         except Exception as e:

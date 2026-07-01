@@ -1,0 +1,6 @@
+INFO:     Started server process [37716]
+INFO:     Waiting for application startup.
+2026-06-16 09:27:38,647 - INFO - MOCK_MODE=true — skipping credential validation. Set MOCK_MODE=false once real credentials are available.
+2026-06-16 09:27:38,647 - INFO - Configuration validated successfully. Starting K8s Troubleshooting Agent...
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)

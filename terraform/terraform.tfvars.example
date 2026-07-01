@@ -1,26 +1,22 @@
 # EKS Cluster Configuration
 name = "eks-agentic-troubleshooting"
 
-# Slack Configuration for AlertManager
+# Slack Configuration for AlertManager (Prometheus alerts only)
 slack_webhook_url  = "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
 slack_channel_name = "#alerts"
 
 # Agentic Agent Configuration
-# Replace with your ECR repository URL after running install.sh or creating it manually
 agentic_image_repository = "123456789012.dkr.ecr.us-east-1.amazonaws.com/eks-agentic-troubleshooting-agent"
 agentic_image_tag        = "latest"
 
-# Slack Bot Configuration
-# Get these from your Slack app configuration
-slack_bot_token      = "xoxb-your-bot-token"
-slack_app_token      = "xapp-your-app-token"
-slack_signing_secret = "your-signing-secret"
+# Google Chat Configuration (replaces Slack bot for ChatOps)
+gchat_service_account_key = ""  # Base64-encoded service account JSON key
+gchat_project_id          = "your-gcp-project-id"
+gchat_project_number      = "123456789012"  # Numeric project number for JWT audience
 
 # Amazon Bedrock Configuration
-# Default model for agentic troubleshooting
 bedrock_model_id = "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
 
 # S3 Vectors Configuration
-# Replace with your S3 vector bucket name after creating it
 vector_bucket_name = "eks-troubleshooting-vectors-1234567890"
 vector_index_name  = "k8s-troubleshooting"

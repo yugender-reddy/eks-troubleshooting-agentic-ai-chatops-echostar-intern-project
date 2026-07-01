@@ -73,3 +73,8 @@ output "helm_status_command" {
   description = "Command to check agentic agent deployment status"
   value       = "helm status k8s-troubleshooting-agent -n default"
 }
+
+output "gchat_webhook_nlb_url" {
+  description = "Command to retrieve the NLB URL to configure as the Google Chat app webhook URL (only populated when chat_platform = 'gchat')"
+  value       = "kubectl get svc k8s-troubleshooting-agent -n default -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
+}

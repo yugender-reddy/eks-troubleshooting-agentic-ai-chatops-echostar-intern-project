@@ -29,25 +29,24 @@ variable "agentic_image_tag" {
   default     = "latest"
 }
 
-variable "slack_bot_token" {
-  description = "Slack bot token for Agentic AI deployment"
+# Google Chat credentials (replace Slack)
+variable "gchat_service_account_key" {
+  description = "Base64-encoded Google Cloud service account JSON key for Google Chat bot"
   type        = string
   default     = ""
   sensitive   = true
 }
 
-variable "slack_app_token" {
-  description = "Slack app token for Socket Mode"
+variable "gchat_project_id" {
+  description = "Google Cloud Project ID for the Chat app"
   type        = string
   default     = ""
-  sensitive   = true
 }
 
-variable "slack_signing_secret" {
-  description = "Slack signing secret for request verification"
+variable "gchat_project_number" {
+  description = "Google Cloud Project Number (for JWT audience verification)"
   type        = string
   default     = ""
-  sensitive   = true
 }
 
 variable "bedrock_model_id" {
@@ -66,4 +65,14 @@ variable "vector_index_name" {
   description = "S3 Vectors index name for troubleshooting knowledge base"
   type        = string
   default     = "k8s-troubleshooting"
+}
+
+variable "chat_platform" {
+  description = "Chat platform to deploy: 'slack' (Socket Mode, no NLB needed) or 'gchat' (HTTP webhook, NLB required)"
+  type        = string
+  default     = "slack"
+  validation {
+    condition     = contains(["slack", "gchat"], var.chat_platform)
+    error_message = "chat_platform must be either 'slack' or 'gchat'."
+  }
 }

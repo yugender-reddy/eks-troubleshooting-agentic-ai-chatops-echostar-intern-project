@@ -7,7 +7,14 @@ strands-agents-tools>=0.2.6
 # MCP support
 mcp
 
-# Slack integration
+# Google Chat webhook server
+fastapi>=0.104.0
+uvicorn>=0.24.0
+
+# Google Chat JWT verification
+google-auth>=2.23.0
+
+# Slack integration (Active)
 slack-sdk>=3.26.0
 slack-bolt>=1.18.0
 
@@ -17,7 +24,3 @@ kubernetes>=28.1.0
 
 # Utilities
 python-dotenv>=1.0.0
-
-# Dashboard
-streamlit>=1.28.0
-pandas>=2.0.0

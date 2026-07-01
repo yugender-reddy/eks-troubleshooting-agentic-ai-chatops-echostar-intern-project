@@ -1,7 +1,11 @@
 """K8s specialist agent with EKS Hosted MCP."""
 from strands import Agent
 import logging
-from src.tools.k8s_tools import describe_pod, get_pods
+from src.tools.k8s_tools import (
+    describe_pod, get_pods, get_pod_logs, get_events,
+    get_deployments, describe_deployment, get_services,
+    get_nodes, get_node_resource_usage, get_namespaces, get_configmaps,
+)
 from src.config.settings import Config
 from src.prompts import K8S_SPECIALIST_SYSTEM_PROMPT
 from mcp import stdio_client, StdioServerParameters
@@ -15,7 +19,11 @@ class K8sSpecialist:
     
     def __init__(self):
         """Initialize the K8s specialist with EKS Hosted MCP."""
-        tools = [describe_pod, get_pods]
+        tools = [
+            get_pods, describe_pod, get_pod_logs, get_events,
+            get_deployments, describe_deployment, get_services,
+            get_nodes, get_node_resource_usage, get_namespaces, get_configmaps,
+        ]
         
         self.eks_mcp_client = None
         self._mcp_connected = False
@@ -64,9 +72,8 @@ class K8sSpecialist:
                     "--profile", "default"
                 ]
                 
-                # Add read-only flag if write is disabled
-                if not Config.ALLOW_WRITE:
-                    args_list.append("--read-only")
+                # ALWAYS enforce read-only — this agent must never mutate the cluster
+                args_list.append("--read-only")
                 
                 self.eks_mcp_client = MCPClient(
                     lambda: stdio_client(
@@ -92,7 +99,7 @@ class K8sSpecialist:
         
         self.agent = Agent(
             system_prompt=self.system_prompt,
-            model=Config.BEDROCK_MODEL_ID,
+            model=Config.REASONING_MODEL_ID,
             tools=tools
         )
     

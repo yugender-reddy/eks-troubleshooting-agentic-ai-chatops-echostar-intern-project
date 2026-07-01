@@ -9,7 +9,7 @@ terraform {
 
 locals {
   name     = var.name
-  region   = "us-east-1"
+  region   = "us-east-2"
   vpc_cidr = "10.0.0.0/16"
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
 
@@ -25,7 +25,7 @@ provider "aws" {
 
 provider "aws" {
   alias  = "ecr"
-  region = "us-east-1"
+  region = "us-east-1"  # ECR Public tokens must come from us-east-1
 }
 
 provider "kubernetes" {
@@ -137,7 +137,7 @@ module "eks_blueprints_addons" {
 
   enable_metrics_server               = true
   enable_karpenter                    = false
-  enable_aws_load_balancer_controller = false
+  enable_aws_load_balancer_controller = true
   enable_kube_prometheus_stack        = true
   kube_prometheus_stack = {
     values = [
